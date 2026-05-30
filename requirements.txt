@@ -4,6 +4,9 @@ pandas
 numpy
 statsmodels
 plotly
-google-generativeai
-lxml
 requests
+lxml
+langchain
+langchain-google-genai
+matplotlib
+scipy
