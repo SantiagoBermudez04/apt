@@ -218,7 +218,7 @@ factores_macro = ['CL=F', '^TNX', '^GSPC']
 # ==========================================
 # CUERPO PRINCIPAL DE LA APLICACIÓN
 # ==========================================
-st.title("📊 Análisis de Riesgo APT Multifactorial (Integración FRED)")
+st.title("📊 Análisis de Riesgo APT Multifactorial")
 st.markdown("""
 Esta aplicación evalúa la exposición de tu cartera a **6 factores macroeconómicos** usando la Teoría de Precios de Arbitraje (APT).
 Incorporamos datos del mercado (Petróleo, Tasas, S&P 500) y datos de la economía real (Inflación, PIB, Desempleo) extraídos de la Reserva Federal.
