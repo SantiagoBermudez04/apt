@@ -4,9 +4,12 @@ pandas
 numpy
 statsmodels
 plotly
-requests
-lxml
-langchain
-langchain-google-genai
 matplotlib
 scipy
+requests
+python-dotenv
+fredapi
+langchain-core
+langchain-google-genai
+langchain-openai
+langchain-anthropic
