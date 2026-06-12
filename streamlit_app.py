@@ -1,6 +1,8 @@
 # app.py — APT Multifactor Risk Analyzer
 
 
+
+
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -18,15 +20,21 @@ from dotenv import load_dotenv
 from fredapi import Fred
 
 
+
+
 # Cargar variables de entorno (tu API de FRED)
 load_dotenv()
 FRED_API_KEY = os.getenv('FRED_API_KEY')
+
+
 
 
 # ==========================================
 # IMPORTACIONES DE LANGCHAIN
 # ==========================================
 from langchain_core.messages import HumanMessage
+
+
 
 
 try:
@@ -37,12 +45,16 @@ except ImportError:
     gemini_available = False
 
 
+
+
 try:
     from langchain_openai import ChatOpenAI
     openai_available = True
 except ImportError:
     ChatOpenAI = None
     openai_available = False
+
+
 
 
 try:
@@ -53,10 +65,14 @@ except ImportError:
     anthropic_available = False
 
 
+
+
 # ==========================================
 # CONFIGURACIÓN DE PÁGINA Y ESTADO
 # ==========================================
 st.set_page_config(page_title="APT Multifactor Analyzer", page_icon="📈", layout="wide")
+
+
 
 
 # ==========================================
@@ -80,6 +96,8 @@ def obtener_tickers_sp500():
         return None
 
 
+
+
 @st.cache_data(ttl=3600)
 def obtener_datos(tickers, factores, periodo):
     todos_los_tickers = tickers + factores
@@ -96,15 +114,15 @@ def obtener_datos(tickers, factores, periodo):
            
         precios.index = pd.to_datetime(precios.index)
         precios = precios.ffill()
-       
-        # HOMOGENEIZACIÓN MENSUAL (Month-End)
-        precios = precios.resample('ME').last().dropna()
+        precios = precios.resample('W-FRI').last().dropna()
        
         retornos = np.log(precios / precios.shift(1)).dropna()
         return retornos
     except Exception as e:
         st.error(f"Error al descargar los datos: {str(e)}")
         return None
+
+
 
 
 @st.cache_data(ttl=86400)
@@ -115,6 +133,8 @@ def obtener_macro_fred(api_key, start_date='2018-01-01'):
         df_diario = pd.read_csv(archivo_cache, index_col=0, parse_dates=True)
         if not df_diario.empty:  
             return df_diario
+
+
 
 
     if not api_key:
@@ -151,10 +171,14 @@ def obtener_macro_fred(api_key, start_date='2018-01-01'):
         return None
 
 
+
+
 # ==========================================
 # SIDEBAR - INPUTS DEL USUARIO
 # ==========================================
 st.sidebar.title("⚙️ Configuración del Portafolio")
+
+
 
 
 periodos = {"1 año": "1y", "2 años": "2y", "3 años": "3y", "5 años": "5y"}
@@ -162,13 +186,19 @@ periodo_str = st.sidebar.selectbox("Período de análisis:", list(periodos.keys(
 periodo_yf = periodos[periodo_str]
 
 
+
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("Activos de la Cartera")
 num_activos = st.sidebar.number_input("Cantidad de Tickers (Max 10)", min_value=1, max_value=10, value=3)
 
 
+
+
 tickers, pesos = [], []
 tickers_default = ['AAPL', 'XOM', 'TSLA']
+
+
 
 
 for i in range(num_activos):
@@ -184,6 +214,8 @@ for i in range(num_activos):
         pesos.append(peso)
 
 
+
+
 boton_deshabilitado = False
 if sum(pesos) != 100.0:
     st.sidebar.error(f"⚠️ La suma es {sum(pesos):.1f}%. Debe ser exactamente 100%.")
@@ -192,14 +224,20 @@ else:
     st.sidebar.success("Suma correcta: 100%")
 
 
+
+
 if any(t == "" for t in tickers):
     st.sidebar.warning("Completa todos los campos de Tickers.")
     boton_deshabilitado = True
 
 
+
+
 if not FRED_API_KEY:
     st.sidebar.error("❌ No se encontró FRED_API_KEY en el archivo .env. Requerida para datos macro.")
     boton_deshabilitado = True
+
+
 
 
 # ==========================================
@@ -209,7 +247,11 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🤖 Análisis con IA (LangChain)")
 
 
+
+
 proveedor_ia = st.sidebar.selectbox("Proveedor de IA", ["Google Gemini", "OpenAI", "Anthropic Claude"])
+
+
 
 
 enlaces_api = {
@@ -220,10 +262,15 @@ enlaces_api = {
 st.sidebar.markdown(f"🔗 [Obtener API Key de {proveedor_ia}]({enlaces_api[proveedor_ia]})")
 
 
+
+
 api_key_usuario = st.sidebar.text_input(f"API Key de {proveedor_ia} (Opcional)", type="password", help="Introduce tu propia clave privada.")
 api_key = api_key_usuario.strip()
 
 
+
+
+# CORRECCIÓN DE MODELOS
 if proveedor_ia == "Google Gemini":
     modelo_elegido = st.sidebar.selectbox("Modelo a utilizar:", [
         "gemini-3.5-flash",
@@ -236,11 +283,17 @@ elif proveedor_ia == "Anthropic Claude":
     modelo_elegido = st.sidebar.selectbox("Modelo a utilizar:", ["claude-3-5-sonnet-20241022"])
 
 
+
+
 st.sidebar.markdown("---")
 analizar_btn = st.sidebar.button("🚀 Analizar Portafolio", disabled=boton_deshabilitado, use_container_width=True)
 
 
+
+
 factores_macro = ['CL=F', '^TNX', '^GSPC']
+
+
 
 
 # ==========================================
@@ -253,8 +306,12 @@ Incorporamos datos del mercado (Petróleo, Tasas, S&P 500) y datos de la econom�
 """)
 
 
+
+
 if not analizar_btn and "analizado" not in st.session_state:
     st.info("👈 Configura tu portafolio en el panel lateral y presiona **Analizar Portafolio** para comenzar.")
+
+
 
 
 if analizar_btn or "analizado" in st.session_state:
@@ -271,7 +328,7 @@ if analizar_btn or "analizado" in st.session_state:
        
         retornos = obtener_datos(tickers, factores_macro, periodo_yf)
         if retornos is None or len(retornos) < 12:
-            st.error("Datos insuficientes para la regresión. Se recomiendan al menos 3 años para datos mensuales.")
+            st.error("Datos insuficientes para la regresión.")
             st.stop()
            
         macro_fred_diario = obtener_macro_fred(FRED_API_KEY)
@@ -279,25 +336,34 @@ if analizar_btn or "analizado" in st.session_state:
             st.stop()
 
 
-        # REINDEXACIÓN MENSUAL
-        macro_mensual = macro_fred_diario.reindex(retornos.index, method='ffill')
+
+
+        macro_semanal = macro_fred_diario.reindex(retornos.index, method='ffill')
+
+
 
 
         pesos_decimales = np.array(pesos) / 100.0
         Y_port_bruto = retornos[tickers].dot(pesos_decimales)
 
 
+
+
         X_honesto = pd.DataFrame()
         X_honesto['Mercado_SP500'] = retornos['^GSPC']
         X_honesto['CL=F'] = retornos['CL=F']
         X_honesto['tasa_10y'] = retornos['^TNX'] - retornos['CL=F']
-        X_honesto['Inflacion'] = macro_mensual['Inflacion']
-        X_honesto['Crecimiento_PIB'] = macro_mensual['Crecimiento_PIB']
-        X_honesto['Cambio_Desempleo'] = macro_mensual['Cambio_Desempleo']
+        X_honesto['Inflacion'] = macro_semanal['Inflacion']
+        X_honesto['Crecimiento_PIB'] = macro_semanal['Crecimiento_PIB']
+        X_honesto['Cambio_Desempleo'] = macro_semanal['Cambio_Desempleo']
+
+
 
 
         X_honesto = X_honesto.dropna()
         Y_port = Y_port_bruto.loc[X_honesto.index]
+
+
 
 
         X_con_constante = sm.add_constant(X_honesto)
@@ -312,6 +378,8 @@ if analizar_btn or "analizado" in st.session_state:
         r2_port = modelo_port.rsquared
 
 
+
+
         r2_factores = {}
         r2_factores['CL=F'] = (Y_port.corr(X_honesto['CL=F'])) ** 2
         r2_factores['^TNX'] = (Y_port.corr(X_honesto['tasa_10y'])) ** 2
@@ -319,6 +387,8 @@ if analizar_btn or "analizado" in st.session_state:
         r2_factores['Inflacion'] = (Y_port.corr(X_honesto['Inflacion'])) ** 2
         r2_factores['PIB'] = (Y_port.corr(X_honesto['Crecimiento_PIB'])) ** 2
         r2_factores['Desempleo'] = (Y_port.corr(X_honesto['Cambio_Desempleo'])) ** 2
+
+
 
 
         betas_individuales = []
@@ -336,8 +406,10 @@ if analizar_btn or "analizado" in st.session_state:
         df_betas = pd.DataFrame(betas_individuales)
 
 
+
+
     # ==========================================
-    # VISUALIZACIÓN EN STREAMLIT
+    # PASO D: VISUALIZACIÓN EN STREAMLIT
     # ==========================================
     st.markdown("### 📌 Métricas del Portafolio Consolidado")
    
@@ -348,11 +420,15 @@ if analizar_btn or "analizado" in st.session_state:
     c3.metric("β Mercado (^GSPC)", f"{beta_crecimiento:.2f}")
 
 
+
+
     st.markdown("#### Sensibilidad (Betas de la Economía Real - FRED)")
     c1b, c2b, c3b = st.columns(3)
     c1b.metric("β Inflación", f"{beta_inflacion:.2f}")
     c2b.metric("β Crecimiento PIB", f"{beta_pbi:.2f}")
     c3b.metric("β Desempleo", f"{beta_desempleo:.2f}")
+
+
 
 
     st.markdown(f"#### Varianza Explicada (R² Total del Modelo: **{r2_port:.2%}**)")
@@ -362,15 +438,21 @@ if analizar_btn or "analizado" in st.session_state:
     c6.metric("R² Mercado", f"{r2_factores['^GSPC']:.2%}")
 
 
+
+
     c7, c8, c9 = st.columns(3)
     c7.metric("R² Inflación", f"{r2_factores['Inflacion']:.2%}")
     c8.metric("R² Crecimiento PIB", f"{r2_factores['PIB']:.2%}")
     c9.metric("R² Desempleo", f"{r2_factores['Desempleo']:.2%}")
 
 
+
+
     st.markdown("---")
     st.markdown("### 📋 Resumen Estadístico OLS")
     st.code(modelo_port.summary().as_text(), language='text')
+
+
 
 
     st.markdown("---")
@@ -380,7 +462,11 @@ if analizar_btn or "analizado" in st.session_state:
     valores_ajustados = modelo_port.fittedvalues
 
 
+
+
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+
 
 
     axes[0].scatter(valores_ajustados, residuos, alpha=0.6, color='purple')
@@ -391,20 +477,24 @@ if analizar_btn or "analizado" in st.session_state:
     axes[0].grid(True)
 
 
+
+
     residuos_df = pd.DataFrame({'e_t': residuos})
     residuos_df['e_t_lag1'] = residuos_df['e_t'].shift(1)
     residuos_df = residuos_df.dropna()
+
+
 
 
     axes[1].scatter(residuos_df['e_t_lag1'], residuos_df['e_t'], alpha=0.6, color='darkblue')
     axes[1].axhline(y=0, color='gray', linestyle='--', linewidth=1)
     axes[1].axvline(x=0, color='gray', linestyle='--', linewidth=1)
     axes[1].set_title('Gráfico de Rezago: $e_t$ vs. $e_{t-1}$')
-   
-    # ETIQUETAS ACTUALIZADAS A MENSUAL
-    axes[1].set_xlabel('Residuos Mes Anterior ($e_{t-1}$)')
-    axes[1].set_ylabel('Residuos Mes Actual ($e_t$)')
+    axes[1].set_xlabel('Residuos Semana Anterior ($e_{t-1}$)')
+    axes[1].set_ylabel('Residuos Semana Actual ($e_t$)')
     axes[1].grid(True)
+
+
 
 
     sm.qqplot(residuos, line='s', ax=axes[2])
@@ -412,8 +502,12 @@ if analizar_btn or "analizado" in st.session_state:
     axes[2].grid(True)
 
 
+
+
     plt.tight_layout()
     st.pyplot(fig)
+
+
 
 
     alertas_activas = []
@@ -439,7 +533,11 @@ if analizar_btn or "analizado" in st.session_state:
         st.success("✅ Tu cartera presenta una exposición moderada a los 6 factores macroeconómicos. No hay sobreconcentraciones extremas.")
 
 
+
+
     st.markdown("---")
+
+
 
 
     st.markdown("### ⚖️ Descomposición de Betas (Portafolio vs Individuales)")
@@ -454,10 +552,14 @@ if analizar_btn or "analizado" in st.session_state:
     df_plot = pd.concat([df_melt, port_data], ignore_index=True)
 
 
+
+
     fig_bar = px.bar(df_plot, x='Beta', y='Factor', color='Ticker', barmode='group', orientation='h',
                      color_discrete_sequence=px.colors.qualitative.Pastel, height=600)
     fig_bar.add_vline(x=0, line_width=2, line_dash="dash", line_color="black")
     st.plotly_chart(fig_bar, use_container_width=True)
+
+
 
 
     st.markdown("### 📈 Dispersión y Regresión (Portafolio vs Factores)")
@@ -481,8 +583,10 @@ if analizar_btn or "analizado" in st.session_state:
             st.plotly_chart(fig_scatter, use_container_width=True)
 
 
+
+
     # ==========================================
-    # ANÁLISIS DE IA CON LANGCHAIN
+    # PASO E: ANÁLISIS DE IA CON LANGCHAIN
     # ==========================================
     st.markdown("---")
     st.markdown("### 🤖 Asesoría Cuantitativa por IA (LangChain)")
@@ -508,6 +612,8 @@ if analizar_btn or "analizado" in st.session_state:
                         - Beta Crecimiento PIB (FRED): {beta_pbi:.4f}
                         - Beta Cambio Desempleo (FRED): {beta_desempleo:.4f}
                         - Alertas activadas: {alertas_str}
+
+
 
 
                         Redacta tu análisis en ESPAÑOL, con estructura clara (viñetas y negritas):
@@ -550,12 +656,16 @@ if analizar_btn or "analizado" in st.session_state:
                             )
 
 
+
+
                         if llm:
                             mensaje = HumanMessage(content=prompt)
                             respuesta = llm.invoke([mensaje])
                            
+                            # --- CORRECCIÓN PARA ANTHROPIC ---
                             contenido = respuesta.content
                            
+                            # Si la respuesta viene como una lista (el formato de Claude)
                             if isinstance(contenido, list):
                                 texto_final = ""
                                 for bloque in contenido:
@@ -564,6 +674,7 @@ if analizar_btn or "analizado" in st.session_state:
                                     elif hasattr(bloque, 'text'):
                                         texto_final += bloque.text
                                 st.session_state["ai_response"] = texto_final
+                            # Si viene como string normal (el formato de OpenAI y Gemini)
                             else:
                                 st.session_state["ai_response"] = str(contenido)
                            
@@ -572,4 +683,8 @@ if analizar_btn or "analizado" in st.session_state:
            
             if st.session_state.get("ai_response"):
                 st.markdown(st.session_state["ai_response"])
+
+
+
+
 
